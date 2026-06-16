@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { registerUser, verifyOTP } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 function RegisterPage() {
+  const [step, setStep] = useState(1); // Step 1: Form, Step 2: OTP
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -11,23 +14,72 @@ function RegisterPage() {
     password: '',
     confirmPassword: '',
   });
-
+  const [otp, setOtp] = useState('');
+  const [userId, setUserId] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  // Step 1 — Register
+  const handleRegister = async (e) => {
     e.preventDefault();
+    setError('');
+
     if (form.password !== form.confirmPassword) {
-      alert('Passwords do not match!');
+      setError('Passwords do not match!');
       return;
     }
-    const finalEmail = `${form.username}@winkget.com`;
-    alert(`Account created! Your Winkget email is: ${finalEmail}`);
-    navigate('/login');
+
+    setLoading(true);
+
+    try {
+      const res = await registerUser({
+        firstName: form.firstName,
+        lastName: form.lastName,
+        username: form.username,
+        dob: form.dob,
+        phone: form.phone,
+        password: form.password,
+      });
+
+      setUserId(res.data.userId);
+
+      // Auto fill OTP
+      setOtp(res.data.devOTP);
+
+      setStep(2);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Registration failed');
+    }
+
+    setLoading(false);
+  };
+
+  // Step 2 — Verify OTP
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const res = await verifyOTP({ userId, otp });
+
+      // Save token and user
+      localStorage.setItem('winkget_token', res.data.token);
+      localStorage.setItem('winkget_user', JSON.stringify(res.data.user));
+
+      navigate('/');
+      window.location.reload();
+    } catch (err) {
+      setError(err.response?.data?.message || 'OTP verification failed');
+    }
+
+    setLoading(false);
   };
 
   return (
@@ -41,110 +93,148 @@ function RegisterPage() {
 
       {/* Card */}
       <div style={styles.card}>
-        <h2 style={styles.title}>Create your Winkget Account</h2>
-        <p style={styles.subtitle}>One account for all Winkget platforms</p>
 
-        <form onSubmit={handleSubmit}>
+        {/* STEP 1 — Registration Form */}
+        {step === 1 && (
+          <>
+            <h2 style={styles.title}>Create your Winkget Account</h2>
+            <p style={styles.subtitle}>One account for all Winkget platforms</p>
 
-          {/* Name Row */}
-          <div style={styles.row}>
-            <input
-              type="text"
-              name="firstName"
-              placeholder="First name"
-              value={form.firstName}
-              onChange={handleChange}
-              style={styles.halfInput}
-              required
-            />
-            <input
-              type="text"
-              name="lastName"
-              placeholder="Last name"
-              value={form.lastName}
-              onChange={handleChange}
-              style={styles.halfInput}
-              required
-            />
-          </div>
+            {error && <div style={styles.error}>{error}</div>}
 
-          {/* Custom Username / Email */}
-          <div style={styles.usernameWrap}>
-            <input
-              type="text"
-              name="username"
-              placeholder="Choose your username"
-              value={form.username}
-              onChange={handleChange}
-              style={styles.usernameInput}
-              required
-            />
-            <span style={styles.domain}>@winkget.com</span>
-          </div>
+            <form onSubmit={handleRegister}>
+              <div style={styles.row}>
+                <input
+                  type="text"
+                  name="firstName"
+                  placeholder="First name"
+                  value={form.firstName}
+                  onChange={handleChange}
+                  style={styles.halfInput}
+                  required
+                />
+                <input
+                  type="text"
+                  name="lastName"
+                  placeholder="Last name"
+                  value={form.lastName}
+                  onChange={handleChange}
+                  style={styles.halfInput}
+                  required
+                />
+              </div>
 
-          {/* Live Preview */}
-          {form.username && (
-            <div style={styles.emailPreview}>
-              📧 Your Winkget email: <strong>{form.username}@winkget.com</strong>
+              {/* Username */}
+              <div style={styles.usernameWrap}>
+                <input
+                  type="text"
+                  name="username"
+                  placeholder="Choose username"
+                  value={form.username}
+                  onChange={handleChange}
+                  style={styles.usernameInput}
+                  required
+                />
+                <span style={styles.domain}>@winkget.com</span>
+              </div>
+
+              {form.username && (
+                <div style={styles.emailPreview}>
+                  📧 Your email: <strong>{form.username}@winkget.com</strong>
+                </div>
+              )}
+
+              <input
+                type="date"
+                name="dob"
+                value={form.dob}
+                onChange={handleChange}
+                style={styles.input}
+                required
+              />
+
+              <input
+                type="tel"
+                name="phone"
+                placeholder="Phone number"
+                value={form.phone}
+                onChange={handleChange}
+                style={styles.input}
+                required
+              />
+
+              <input
+                type="password"
+                name="password"
+                placeholder="Password"
+                value={form.password}
+                onChange={handleChange}
+                style={styles.input}
+                required
+              />
+
+              <input
+                type="password"
+                name="confirmPassword"
+                placeholder="Confirm password"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                style={styles.input}
+                required
+              />
+
+              <div style={styles.btnRow}>
+                <a href="/login" style={styles.loginLink}>Already have an account?</a>
+                <button type="submit" style={styles.btn} disabled={loading}>
+                  {loading ? 'Please wait...' : 'Next'}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+
+        {/* STEP 2 — OTP Verification */}
+        {step === 2 && (
+          <>
+            <h2 style={styles.title}>Verify your phone</h2>
+            <p style={styles.subtitle}>
+              OTP sent to <strong>{form.phone}</strong>
+            </p>
+
+            {/* Dev notice */}
+            <div style={styles.devNotice}>
+              🛠️ Development mode — OTP auto filled
             </div>
-          )}
 
-          {/* DOB */}
-          <input
-            type="date"
-            name="dob"
-            value={form.dob}
-            onChange={handleChange}
-            style={styles.input}
-            required
-          />
+            {error && <div style={styles.error}>{error}</div>}
 
-          {/* Phone */}
-          <input
-            type="tel"
-            name="phone"
-            placeholder="Phone number"
-            value={form.phone}
-            onChange={handleChange}
-            style={styles.input}
-            required
-          />
+            <form onSubmit={handleVerifyOTP}>
+              <input
+                type="text"
+                placeholder="Enter 6-digit OTP"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                style={styles.input}
+                maxLength={6}
+                required
+              />
 
-          {/* Password */}
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            style={styles.input}
-            required
-          />
+              <div style={styles.btnRow}>
+                <span
+                  style={styles.loginLink}
+                  onClick={() => setStep(1)}
+                >
+                  ← Go back
+                </span>
+                <button type="submit" style={styles.btn} disabled={loading}>
+                  {loading ? 'Verifying...' : 'Verify OTP'}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
 
-          {/* Confirm Password */}
-          <input
-            type="password"
-            name="confirmPassword"
-            placeholder="Confirm password"
-            value={form.confirmPassword}
-            onChange={handleChange}
-            style={styles.input}
-            required
-          />
-
-          {/* Buttons */}
-          <div style={styles.btnRow}>
-            <a href="/login" style={styles.loginLink}>
-              Already have an account?
-            </a>
-            <button type="submit" style={styles.registerBtn}>
-              Next
-            </button>
-          </div>
-
-        </form>
       </div>
-
     </div>
   );
 }
@@ -185,6 +275,24 @@ const styles = {
     fontSize: '14px',
     color: '#70757a',
     margin: '0 0 24px 0',
+  },
+  error: {
+    backgroundColor: '#FEE2E2',
+    border: '1px solid #FECACA',
+    borderRadius: '6px',
+    padding: '10px 14px',
+    fontSize: '13px',
+    color: '#DC2626',
+    marginBottom: '16px',
+  },
+  devNotice: {
+    backgroundColor: '#FEF3C7',
+    border: '1px solid #FDE68A',
+    borderRadius: '6px',
+    padding: '10px 14px',
+    fontSize: '13px',
+    color: '#92400E',
+    marginBottom: '16px',
   },
   row: {
     display: 'flex',
@@ -255,8 +363,9 @@ const styles = {
     color: '#4F46E5',
     fontSize: '14px',
     fontWeight: '500',
+    cursor: 'pointer',
   },
-  registerBtn: {
+  btn: {
     backgroundColor: '#4F46E5',
     color: '#fff',
     border: 'none',

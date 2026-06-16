@@ -1,34 +1,50 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { loginUser } from '../services/api';
 
 const AuthContext = createContext();
 
-// Dummy user data
-const DUMMY_USER = {
-  firstName: 'Hariom',
-  lastName: 'Dubey',
-  email: 'hariomdubey@winkget.com',
-  accountType: 'personal',
-};
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = (email, password) => {
-    // Dummy login - backend se baad mein connect karenge
-    if (email && password) {
-      setUser(DUMMY_USER);
-      return true;
+  // Page reload pe bhi login rahe
+  useEffect(() => {
+    const savedUser = localStorage.getItem('winkget_user');
+    const savedToken = localStorage.getItem('winkget_token');
+    if (savedUser && savedToken) {
+      setUser(JSON.parse(savedUser));
     }
-    return false;
+    setLoading(false);
+  }, []);
+
+  const login = async (identifier, password) => {
+    try {
+      const res = await loginUser({ identifier, password });
+      const { token, user } = res.data;
+
+      // Save to localStorage
+      localStorage.setItem('winkget_token', token);
+      localStorage.setItem('winkget_user', JSON.stringify(user));
+
+      setUser(user);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Login failed',
+      };
+    }
   };
 
   const logout = () => {
+    localStorage.removeItem('winkget_token');
+    localStorage.removeItem('winkget_user');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
-      {children}
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 }

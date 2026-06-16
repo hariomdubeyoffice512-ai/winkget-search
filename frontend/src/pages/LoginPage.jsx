@@ -3,19 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const success = login(email, password);
-    if (success) {
+    setError('');
+    setLoading(true);
+
+    const result = await login(identifier, password);
+
+    setLoading(false);
+
+    if (result.success) {
       navigate('/');
     } else {
-      setError('Invalid email or password');
+      setError(result.message);
     }
   };
 
@@ -38,9 +45,9 @@ function LoginPage() {
         <form onSubmit={handleLogin}>
           <input
             type="text"
-            placeholder="Email (@winkget.com)"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Phone number or email (@winkget.com)"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             style={styles.input}
             required
           />
@@ -57,7 +64,9 @@ function LoginPage() {
 
           <div style={styles.btnRow}>
             <a href="/register" style={styles.createBtn}>Create account</a>
-            <button type="submit" style={styles.loginBtn}>Next</button>
+            <button type="submit" style={styles.loginBtn} disabled={loading}>
+              {loading ? 'Signing in...' : 'Next'}
+            </button>
           </div>
         </form>
       </div>
@@ -149,6 +158,7 @@ const styles = {
     fontSize: '14px',
     cursor: 'pointer',
     fontWeight: '500',
+    opacity: 1,
   },
 };
 

@@ -1,232 +1,241 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-// Helper for the Grouped Menu Blocks (the white rounded cards)
-const MenuBlock = ({ children }) => {
-  return (
-    <div style={styles.menuBlock}>
-      {React.Children.map(children, (child, index) => {
-        // Add a top border to all items except the first one to create the divider line
-        return React.cloneElement(child, {
-          style: {
-            ...child.props.style,
-            borderTop: index > 0 ? '1px solid #e1e3e1' : 'none',
-          }
-        });
-      })}
-    </div>
-  );
-};
-
-// Helper for the individual hoverable items inside the blocks
-const MenuItem = ({ icon, text, rightText, badge, onClick, style, isDanger }) => {
-  const [isHovered, setIsHovered] = useState(false);
-
-  return (
-    <div
-      style={{
-        ...styles.menuItem,
-        backgroundColor: isHovered ? '#f4f7fc' : '#ffffff',
-        color: isDanger ? '#d93025' : '#1f1f1f',
-        ...style
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={onClick}
-    >
-      <span style={{...styles.menuIcon, color: isDanger ? '#d93025' : '#444746'}}>{icon}</span>
-      <span style={{ flex: 1 }}>{text}</span>
-      
-      {rightText && <span style={styles.menuRightText}>{rightText}</span>}
-      {badge && <span style={styles.menuBadge}>{badge}</span>}
-    </div>
-  );
-};
-
 function HomePage() {
   const [query, setQuery] = useState('');
-  const [showMenu, setShowMenu] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [personalInfoOpen, setPersonalInfoOpen] = useState(false);
   const navigate = useNavigate();
-  
-  const { user, logout } = useAuth() || { 
-    user: { firstName: 'Admin', email: 'admin@winkget.com' }, 
-    logout: () => {} 
+
+  const { user, logout } = useAuth() || {
+    user: { firstName: 'Admin', lastName: 'User', email: 'admin@winkget.com', phone: '9999999999', dob: '2000-01-01' },
+    logout: () => {}
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (query.trim()) {
-      navigate(`/search?q=${query}`);
-    }
+    if (query.trim()) navigate(`/search?q=${query}`);
   };
 
-  const handleLogout = () => {
-    logout();
-    setShowMenu(false);
-  };
+  const getInitial = () => user?.firstName?.[0]?.toUpperCase() || '?';
 
-  const getInitial = () => {
-    if (user?.firstName) return user.firstName[0].toUpperCase();
-    return '?';
+  const formatDob = (dob) => {
+    if (!dob) return '—';
+    return new Date(dob).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
   };
 
   return (
-    <div style={styles.page} onClick={() => setShowMenu(false)}>
+    <div style={s.page} onClick={() => { setDrawerOpen(false); setPersonalInfoOpen(false); }}>
 
-      {/* Top Right */}
-      <div style={styles.topRight} onClick={(e) => e.stopPropagation()}>
-        {user ? (
-          <div style={styles.avatarWrap}>
-            {/* Main Small Avatar */}
-            <div 
+      {/* ── Top Left Avatar ── */}
+      {user && (
+        <div
+          style={s.topLeftAvatar}
+          onClick={(e) => { e.stopPropagation(); setDrawerOpen(!drawerOpen); }}
+          title="Menu"
+        >
+          {getInitial()}
+        </div>
+      )}
+
+      {/* ── Top Right — only when logged out ── */}
+      {!user && (
+        <div style={s.topRight}>
+          <a href="/login" style={s.loginLink}>Sign in</a>
+          <a href="/register" style={s.registerBtn}>Create account</a>
+        </div>
+      )}
+
+      {/* ── Overlay ── */}
+      {drawerOpen && (
+        <div onClick={() => { setDrawerOpen(false); setPersonalInfoOpen(false); }} style={s.overlay} />
+      )}
+
+      {/* ── Drawer ── */}
+      <div
+        style={{
+          ...s.drawer,
+          transform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* User Header */}
+        <div style={s.drawerHeader}>
+          <div style={s.drawerAvatar}>{getInitial()}</div>
+          <div>
+            <p style={s.drawerName}>{user?.firstName} {user?.lastName}</p>
+            <p style={s.drawerEmail}>{user?.email || `${user?.username}@winkget.com`}</p>
+          </div>
+        </div>
+
+        {/* ── Nav Items ── */}
+        <nav style={s.nav}>
+
+          {/* Personal Info — Accordion */}
+          <div>
+            <button
               style={{
-                ...styles.avatar,
-                boxShadow: showMenu ? '0 0 0 4px #e8eaed' : 'none'
-              }} 
-              onClick={() => setShowMenu(!showMenu)}
+                ...s.navItem,
+                background: personalInfoOpen ? '#f0eeff' : 'transparent',
+                color: personalInfoOpen ? '#4F46E5' : '#1f1f1f',
+              }}
+              onClick={() => setPersonalInfoOpen(!personalInfoOpen)}
             >
-              {getInitial()}
-            </div>
+              <span style={s.navIcon}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              </span>
+              <span style={s.navLabel}>Personal Info</span>
+              <span style={{
+                ...s.chevron,
+                transform: personalInfoOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </span>
+            </button>
 
-            {/* Google-Style Dropdown Card */}
-            {showMenu && (
-              <div style={styles.dropdown}>
+            {/* Accordion Content */}
+            {personalInfoOpen && (
+              <div style={s.accordionBody}>
 
-                {/* Email & Close Header */}
-                <div style={styles.dropdownHeader}>
-                  <span style={styles.emailText}>{user.email}</span>
-                  <button style={styles.closeBtn} onClick={() => setShowMenu(false)}>✕</button>
-                </div>
-
-                {/* Profile Avatar Center */}
-                <div style={styles.profileSection}>
-                  <div style={styles.avatarContainer}>
-                    <div style={styles.bigAvatar}>{getInitial()}</div>
-                    {/* Camera Icon Overlay */}
-                    <div style={styles.cameraIconWrap}>
-                      <span style={{fontSize: '12px'}}>📷</span>
-                    </div>
-                  </div>
-                  <div style={styles.hiText}>Hi, {user.firstName}!</div>
-                  <button 
-                    style={styles.manageBtn}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f4f7fc'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#fff'}
-                  >
-                    Manage your Winkget Account
-                  </button>
-                </div>
-
-                {/* Show More Accounts Pill - Kept for structural layout */}
-                <div 
-                  style={styles.moreAccountsBtn}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f4f7fc'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}
-                >
-                  <span style={{ fontWeight: 500 }}>Show more accounts</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={styles.tinyAvatar}>{getInitial()}</div>
-                    <span style={{ color: '#444746', fontSize: '18px' }}>⌄</span>
+                {/* Avatar + name mini header */}
+                <div style={s.miniHeader}>
+                  <div style={s.miniAvatar}>{getInitial()}</div>
+                  <div>
+                    <p style={s.miniName}>{user?.firstName} {user?.lastName}</p>
+                    <p style={s.miniEmail}>{user?.email}</p>
                   </div>
                 </div>
 
-                {/* Section Header */}
-                <div style={styles.sectionLabel}>More from Winkget Search</div>
+                <div style={s.divider} />
 
-                {/* Grouped Menu Blocks with your original Winkget items */}
-                
-                {/* Block 1: History */}
-                <MenuBlock>
-                  <MenuItem icon="🕐" text="Search History" rightText="Saving" />
-                  <MenuItem icon="🗑️" text="Delete last 30 minutes" />
-                </MenuBlock>
+                {/* Basic Details */}
+                <p style={s.sectionTitle}>Basic Details</p>
+                {[
+                  { label: 'First Name', value: user?.firstName },
+                  { label: 'Last Name', value: user?.lastName },
+                  { label: 'Username', value: user?.username ? `@${user.username}` : '—' },
+                  { label: 'Email', value: user?.email },
+                  { label: 'Phone', value: user?.phone },
+                  { label: 'Date of Birth', value: formatDob(user?.dob) },
+                  { label: 'Gender', value: user?.personalInfo?.gender },
+                ].map((row) => (
+                  <div key={row.label} style={s.infoRow}>
+                    <span style={s.infoLabel}>{row.label}</span>
+                    <span style={s.infoValue}>{row.value || '—'}</span>
+                  </div>
+                ))}
 
-                {/* Block 2: Personalization & Profile */}
-                <MenuBlock>
-                  <MenuItem icon="✨" text="Search Personalisation" />
-                  <MenuItem icon="🔖" text="Saves & Bookmarks" />
-                  <MenuItem icon="👤" text="Your Search Profile" />
-                </MenuBlock>
+                <div style={s.divider} />
 
-                {/* Block 3: Settings & Business */}
-                <MenuBlock>
-                  <MenuItem icon="🛡️" text="SafeSearch" rightText="Off" />
-                  <MenuItem icon="🌐" text="Language" rightText="English" />
-                  <MenuItem icon="💼" text="Switch to Business" />
-                </MenuBlock>
+                {/* Address */}
+                <p style={s.sectionTitle}>Address</p>
+                {[
+                  { label: 'Home', value: user?.personalInfo?.homeAddress },
+                  { label: 'Work', value: user?.personalInfo?.workAddress },
+                  { label: 'City', value: user?.personalInfo?.city },
+                  { label: 'State', value: user?.personalInfo?.state },
+                  { label: 'Pincode', value: user?.personalInfo?.pincode },
+                ].map((row) => (
+                  <div key={row.label} style={s.infoRow}>
+                    <span style={s.infoLabel}>{row.label}</span>
+                    <span style={s.infoValue}>{row.value || '—'}</span>
+                  </div>
+                ))}
 
-                {/* Block 4: App Settings */}
-                <MenuBlock>
-                  <MenuItem icon="⚙️" text="More Settings" />
-                  <MenuItem icon="❓" text="Help" />
-                </MenuBlock>
+                {user?.personalInfo?.bio && (
+                  <>
+                    <div style={s.divider} />
+                    <p style={s.sectionTitle}>Bio</p>
+                    <p style={s.bioText}>{user.personalInfo.bio}</p>
+                  </>
+                )}
 
-                {/* Block 5: Sign Out */}
-                <MenuBlock>
-                  <MenuItem icon="🚪" text="Sign Out" isDanger={true} onClick={handleLogout} />
-                </MenuBlock>
+                <div style={s.divider} />
 
-                {/* Footer Links */}
-                <div style={styles.dropdownFooter}>
-                  <a href="#" style={styles.footerLink}>Privacy Policy</a>
-                  <span style={styles.footerDot}>•</span>
-                  <a href="#" style={styles.footerLink}>Terms of Service</a>
+                {/* Account */}
+                <p style={s.sectionTitle}>Account</p>
+                <div style={s.infoRow}>
+                  <span style={s.infoLabel}>Account Type</span>
+                  <span style={s.badge}>
+                    {user?.accountType === 'business' ? 'Business' : 'Personal'}
+                  </span>
+                </div>
+                <div style={s.infoRow}>
+                  <span style={s.infoLabel}>Verified</span>
+                  <span style={{ fontSize: '13px', fontWeight: '500', color: user?.isVerified ? '#1a7f45' : '#b45309' }}>
+                    {user?.isVerified ? '✓ Verified' : '✗ Not verified'}
+                  </span>
                 </div>
 
               </div>
             )}
           </div>
-        ) : (
-          <>
-            <a href="/login" style={styles.loginLink}>Login</a>
-            <a href="/register" style={styles.registerBtn}>Create Account</a>
-          </>
-        )}
+
+        </nav>
+
+        {/* Bottom — Sign out */}
+        <div style={s.drawerBottom}>
+          <button onClick={() => { logout(); setDrawerOpen(false); }} style={s.signOutBtn}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Sign out
+          </button>
+        </div>
       </div>
 
-      {/* Center Main Content */}
-      <div style={styles.center}>
-        <h1 style={styles.logo}>
-          <span style={{ color: '#4F46E5' }}>Wink</span>
-          <span style={{ color: '#7C3AED' }}>get</span>
+      {/* ── Center ── */}
+      <div style={s.center}>
+        <h1 style={s.logo}>
+          <span style={{ color: '#4F46E5' }}>Wink</span><span style={{ color: '#7C3AED' }}>get</span>
         </h1>
+        <p style={s.tagline}>Search across the Winkget ecosystem</p>
 
-        <form onSubmit={handleSearch}>
-          <div style={styles.searchBox}>
-            <span style={styles.icon}>🔍</span>
+        <form onSubmit={handleSearch} style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <div style={s.searchBox}>
+            <svg style={{ marginRight: '12px', flexShrink: 0 }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9aa0a6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
             <input
               autoFocus
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search Winkget..."
-              style={styles.input}
+              style={s.input}
             />
             {query && (
-              <span onClick={() => setQuery('')} style={styles.clear}>✕</span>
+              <button type="button" onClick={() => setQuery('')} style={s.clearBtn}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9aa0a6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
             )}
           </div>
         </form>
 
-        <div style={styles.platforms}>
-          <a href="#" style={styles.platformLink}>🛒 Shop</a>
-          <a href="#" style={styles.platformLink}>🍔 Food</a>
-          <a href="#" style={styles.platformLink}>💼 Jobs</a>
-          <a href="#" style={styles.platformLink}>⚖️ Legal</a>
-          <a href="#" style={styles.platformLink}>💰 Finance</a>
-          <a href="#" style={styles.platformLink}>🏠 Real Estate</a>
+        <div style={s.platforms}>
+          {['Shop', 'Food', 'Jobs', 'Legal', 'Finance', 'Real Estate'].map((p) => (
+            <a key={p} href="#" style={s.platformLink}>{p}</a>
+          ))}
         </div>
       </div>
 
-      <div style={styles.footer}>© 2026 Winkget Technologies</div>
-
+      <div style={s.footer}>© 2026 Winkget Technologies</div>
     </div>
   );
 }
 
-// Styling Object
-const styles = {
+const s = {
   page: {
     minHeight: '100vh',
     backgroundColor: '#fff',
@@ -235,84 +244,301 @@ const styles = {
     flexDirection: 'column',
     position: 'relative',
   },
-  topRight: {
-    position: 'absolute',
+  topLeftAvatar: {
+    position: 'fixed',
     top: '16px',
-    right: '24px',
-    display: 'flex',
-    gap: '14px',
-    alignItems: 'center',
-    zIndex: 100,
-  },
-  loginLink: { textDecoration: 'none', color: '#1f1f1f', fontSize: '14px', fontWeight: '500' },
-  registerBtn: { textDecoration: 'none', backgroundColor: '#0b57d0', color: '#fff', padding: '9px 24px', borderRadius: '24px', fontSize: '14px', fontWeight: '500' },
-  avatarWrap: { position: 'relative' },
-  avatar: {
+    left: '18px',
     width: '36px',
     height: '36px',
-    backgroundColor: '#8b5cf6',
     borderRadius: '50%',
+    background: '#4F46E5',
     color: '#fff',
-    fontWeight: '500',
-    fontSize: '16px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    fontWeight: '600',
+    fontSize: '15px',
     cursor: 'pointer',
+    zIndex: 300,
     userSelect: 'none',
-    transition: 'box-shadow 0.2s',
+    boxShadow: '0 1px 4px rgba(79,70,229,0.3)',
   },
-
-  // Dropdown Container
-  dropdown: {
-    position: 'absolute',
-    top: '48px',
-    right: '0',
-    backgroundColor: '#e9eef6', 
-    border: 'none',
-    borderRadius: '28px', 
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08)',
-    width: '380px',
-    padding: '16px', 
-    zIndex: 200,
-    maxHeight: '85vh',
+  topRight: {
+    position: 'fixed',
+    top: '16px',
+    right: '24px',
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  loginLink: {
+    textDecoration: 'none',
+    color: '#1f1f1f',
+    fontSize: '14px',
+    fontWeight: '500',
+  },
+  registerBtn: {
+    textDecoration: 'none',
+    backgroundColor: '#4F46E5',
+    color: '#fff',
+    padding: '9px 22px',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontWeight: '500',
+  },
+  overlay: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.2)',
+    zIndex: 198,
+  },
+  drawer: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    height: '100vh',
+    width: '280px',
+    background: '#fff',
+    zIndex: 199,
+    boxShadow: '2px 0 16px rgba(0,0,0,0.08)',
+    transition: 'transform 0.27s ease',
+    display: 'flex',
+    flexDirection: 'column',
     overflowY: 'auto',
   },
-  
-  dropdownHeader: { display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', marginBottom: '20px' },
-  emailText: { fontSize: '14px', color: '#1f1f1f', fontWeight: '500' },
-  closeBtn: { position: 'absolute', right: '0', background: 'none', border: 'none', cursor: 'pointer', color: '#444746', fontSize: '18px', padding: '4px', borderRadius: '50%' },
-
-  profileSection: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' },
-  avatarContainer: { position: 'relative', marginBottom: '12px' },
-  bigAvatar: { width: '84px', height: '84px', backgroundColor: '#8b5cf6', borderRadius: '50%', color: '#fff', fontWeight: '400', fontSize: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  cameraIconWrap: { position: 'absolute', bottom: '0', right: '0', backgroundColor: '#fff', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', cursor: 'pointer' },
-  hiText: { fontSize: '22px', fontWeight: '400', color: '#1f1f1f', marginBottom: '16px' },
-  manageBtn: { backgroundColor: '#fff', border: '1px solid #747775', borderRadius: '100px', padding: '10px 24px', fontSize: '14px', color: '#0b57d0', cursor: 'pointer', fontWeight: '500', transition: 'background-color 0.2s' },
-
-  moreAccountsBtn: { backgroundColor: '#fff', borderRadius: '24px', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', cursor: 'pointer', fontSize: '14px', color: '#1f1f1f' },
-  tinyAvatar: { width: '20px', height: '20px', backgroundColor: '#8b5cf6', borderRadius: '50%', color: '#fff', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-
-  sectionLabel: { fontSize: '13px', color: '#444746', padding: '0 12px 8px' },
-  menuBlock: { backgroundColor: '#fff', borderRadius: '24px', overflow: 'hidden', marginBottom: '8px', display: 'flex', flexDirection: 'column' },
-  menuItem: { display: 'flex', alignItems: 'center', padding: '16px 20px', fontSize: '14px', cursor: 'pointer', gap: '16px', transition: 'background-color 0.15s' },
-  menuIcon: { fontSize: '20px', width: '24px', textAlign: 'center' },
-  menuRightText: { fontSize: '13px', color: '#444746' },
-  menuBadge: { backgroundColor: '#0b57d0', color: '#fff', fontSize: '11px', fontWeight: '500', padding: '2px 8px', borderRadius: '4px' },
-
-  dropdownFooter: { display: 'flex', justifyContent: 'center', gap: '12px', padding: '12px 0 4px', fontSize: '12px' },
-  footerLink: { textDecoration: 'none', color: '#444746' },
-  footerDot: { color: '#444746' },
-
-  center: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: '-60px' },
-  logo: { fontSize: '72px', fontWeight: '700', margin: '0 0 30px 0' },
-  searchBox: { display: 'flex', alignItems: 'center', border: '1px solid #dfe1e5', borderRadius: '24px', padding: '14px 20px', width: '580px', boxShadow: '0 1px 5px rgba(32,33,36,.1)' },
-  icon: { marginRight: '12px', fontSize: '18px', color: '#9aa0a6' },
-  input: { flex: 1, border: 'none', outline: 'none', fontSize: '16px', color: '#202124' },
-  clear: { cursor: 'pointer', color: '#9aa0a6', fontSize: '16px' },
-  platforms: { display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '28px' },
-  platformLink: { textDecoration: 'none', color: '#3c4043', backgroundColor: '#f8f9fa', fontSize: '13px', padding: '8px 16px', borderRadius: '100px', border: '1px solid #dadce0' },
-  footer: { textAlign: 'center', padding: '16px', borderTop: '1px solid #dadce0', fontSize: '13px', color: '#70757a', backgroundColor: '#f8f9fa' },
+  drawerHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '22px 18px 18px',
+    borderBottom: '1px solid #f0f0f0',
+  },
+  drawerAvatar: {
+    width: '42px',
+    height: '42px',
+    minWidth: '42px',
+    borderRadius: '50%',
+    background: '#4F46E5',
+    color: '#fff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: '600',
+    fontSize: '17px',
+  },
+  drawerName: {
+    margin: 0,
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#1f1f1f',
+  },
+  drawerEmail: {
+    margin: '2px 0 0',
+    fontSize: '12px',
+    color: '#70757a',
+  },
+  nav: {
+    flex: 1,
+    padding: '10px 8px',
+  },
+  navItem: {
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '11px',
+    padding: '10px 12px',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    textAlign: 'left',
+    transition: 'background 0.15s',
+  },
+  navIcon: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  navLabel: {
+    flex: 1,
+  },
+  chevron: {
+    display: 'flex',
+    alignItems: 'center',
+    transition: 'transform 0.2s',
+    color: '#9aa0a6',
+  },
+  accordionBody: {
+    padding: '14px 14px 6px',
+    margin: '4px 0 8px',
+    background: '#fafafa',
+    borderRadius: '10px',
+    border: '1px solid #f0f0f0',
+  },
+  miniHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginBottom: '14px',
+  },
+  miniAvatar: {
+    width: '36px',
+    height: '36px',
+    minWidth: '36px',
+    borderRadius: '50%',
+    background: '#4F46E5',
+    color: '#fff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: '600',
+    fontSize: '14px',
+  },
+  miniName: {
+    margin: 0,
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#1f1f1f',
+  },
+  miniEmail: {
+    margin: '1px 0 0',
+    fontSize: '11px',
+    color: '#70757a',
+  },
+  divider: {
+    height: '1px',
+    background: '#efefef',
+    margin: '12px 0',
+  },
+  sectionTitle: {
+    margin: '0 0 8px',
+    fontSize: '10px',
+    fontWeight: '600',
+    color: '#9aa0a6',
+    letterSpacing: '0.07em',
+    textTransform: 'uppercase',
+  },
+  infoRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '7px 0',
+    borderBottom: '1px solid #f5f5f5',
+  },
+  infoLabel: {
+    fontSize: '12px',
+    color: '#70757a',
+  },
+  infoValue: {
+    fontSize: '12px',
+    color: '#1f1f1f',
+    fontWeight: '500',
+    textAlign: 'right',
+    maxWidth: '140px',
+    wordBreak: 'break-word',
+  },
+  bioText: {
+    fontSize: '12px',
+    color: '#3c4043',
+    lineHeight: '1.6',
+    margin: 0,
+  },
+  badge: {
+    fontSize: '11px',
+    fontWeight: '500',
+    background: '#f0eeff',
+    color: '#4F46E5',
+    padding: '2px 10px',
+    borderRadius: '100px',
+  },
+  drawerBottom: {
+    padding: '14px 12px',
+    borderTop: '1px solid #f0f0f0',
+  },
+  signOutBtn: {
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '9px',
+    border: '1px solid #e8eaed',
+    borderRadius: '8px',
+    background: 'transparent',
+    cursor: 'pointer',
+    fontSize: '13px',
+    color: '#5f6368',
+    fontWeight: '500',
+  },
+  center: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: '-40px',
+  },
+  logo: {
+    fontSize: '64px',
+    fontWeight: '700',
+    margin: '0 0 8px 0',
+    letterSpacing: '-1px',
+  },
+  tagline: {
+    fontSize: '14px',
+    color: '#70757a',
+    margin: '0 0 28px',
+    fontWeight: '400',
+  },
+  searchBox: {
+    display: 'flex',
+    alignItems: 'center',
+    border: '1px solid #dfe1e5',
+    borderRadius: '24px',
+    padding: '12px 20px',
+    width: '560px',
+    boxShadow: '0 1px 4px rgba(32,33,36,0.08)',
+  },
+  input: {
+    flex: 1,
+    border: 'none',
+    outline: 'none',
+    fontSize: '16px',
+    color: '#202124',
+    background: 'transparent',
+  },
+  clearBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    padding: '2px',
+  },
+  platforms: {
+    display: 'flex',
+    gap: '10px',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginTop: '24px',
+  },
+  platformLink: {
+    textDecoration: 'none',
+    color: '#3c4043',
+    backgroundColor: '#f8f9fa',
+    fontSize: '13px',
+    padding: '7px 16px',
+    borderRadius: '6px',
+    border: '1px solid #dadce0',
+    fontWeight: '500',
+  },
+  footer: {
+    textAlign: 'center',
+    padding: '14px',
+    borderTop: '1px solid #f0f0f0',
+    fontSize: '12px',
+    color: '#9aa0a6',
+  },
 };
 
 export default HomePage;
