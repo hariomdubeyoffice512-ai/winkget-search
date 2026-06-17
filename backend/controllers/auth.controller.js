@@ -1,31 +1,28 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-// Generate JWT Token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE,
   });
 };
 
-// Generate 6 digit OTP
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// @route   POST /api/auth/register
 const register = async (req, res) => {
   try {
     const { firstName, lastName, username, dob, phone, password } = req.body;
 
     const existingUser = await User.findOne({ username });
 
-if (existingUser) {
-  return res.status(400).json({
-    success: false,
-    message: 'Username already taken',
-  });
-}
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username already taken',
+      });
+    }
 
     const otp = generateOTP();
     const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
@@ -60,7 +57,6 @@ if (existingUser) {
   }
 };
 
-// @route   POST /api/auth/verify-otp
 const verifyOTP = async (req, res) => {
   try {
     const { userId, otp } = req.body;
@@ -103,9 +99,13 @@ const verifyOTP = async (req, res) => {
         id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
+        username: user.username,
         email: user.email,
         phone: user.phone,
+        dob: user.dob,
         accountType: user.accountType,
+        isVerified: user.isVerified,
+        personalInfo: user.personalInfo,
       },
     });
 
@@ -117,7 +117,6 @@ const verifyOTP = async (req, res) => {
   }
 };
 
-// @route   POST /api/auth/login
 const login = async (req, res) => {
   try {
     const { identifier, password } = req.body;
@@ -161,9 +160,13 @@ const login = async (req, res) => {
         id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
+        username: user.username,
         email: user.email,
         phone: user.phone,
+        dob: user.dob,
         accountType: user.accountType,
+        isVerified: user.isVerified,
+        personalInfo: user.personalInfo,
       },
     });
 

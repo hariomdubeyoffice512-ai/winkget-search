@@ -7,7 +7,6 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Page reload pe bhi login rahe
   useEffect(() => {
     const savedUser = localStorage.getItem('winkget_user');
     const savedToken = localStorage.getItem('winkget_token');
@@ -21,11 +20,8 @@ export function AuthProvider({ children }) {
     try {
       const res = await loginUser({ identifier, password });
       const { token, user } = res.data;
-
-      // Save to localStorage
       localStorage.setItem('winkget_token', token);
       localStorage.setItem('winkget_user', JSON.stringify(user));
-
       setUser(user);
       return { success: true };
     } catch (error) {
@@ -43,7 +39,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, setUser, login, logout, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );
