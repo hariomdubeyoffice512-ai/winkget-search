@@ -18,18 +18,14 @@ const register = async (req, res) => {
   try {
     const { firstName, lastName, username, dob, phone, password } = req.body;
 
-    const existingUser = await User.findOne({
-      $or: [{ username }, { phone }],
-    });
+    const existingUser = await User.findOne({ username });
 
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: existingUser.username === username
-          ? 'Username already taken'
-          : 'Phone number already registered',
-      });
-    }
+if (existingUser) {
+  return res.status(400).json({
+    success: false,
+    message: 'Username already taken',
+  });
+}
 
     const otp = generateOTP();
     const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
