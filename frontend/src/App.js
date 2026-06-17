@@ -5,11 +5,13 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import './App.css';
+import PersonalInfoPage from './pages/PersonalInfoPage';
 
 function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/personal-info" element={<PersonalInfoPage />} />
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
